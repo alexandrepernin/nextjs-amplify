@@ -61,7 +61,7 @@ export class AmplifyStack extends Stack {
     });
 
     new AwsCustomResource(this, "aws-custom", {
-      onUpdate: {
+      onCreate: {
         service: "Amplify",
         action: "updateApp",
         parameters: {
@@ -76,6 +76,31 @@ export class AmplifyStack extends Stack {
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: [amplifyApp.arn],
       }),
+    });
+
+    const webhookCustomResource = new AwsCustomResource(
+      this,
+      "aws-custom-webhook",
+      {
+        onCreate: {
+          service: "Amplify",
+          action: "createWebhook",
+          parameters: {
+            appId: amplifyApp.appId,
+            branchName: "main",
+          },
+          physicalResourceId: PhysicalResourceId.of(
+            "test-amplify-custom-resource-webhook"
+          ),
+        },
+        policy: AwsCustomResourcePolicy.fromSdkCalls({
+          resources: [`${amplifyApp.arn}/webhooks/*`],
+        }),
+      }
+    );
+
+    new CfnOutput(this, "webhookUrl", {
+      value: webhookCustomResource.getResponseField("webhook.webhookUrl"),
     });
   }
 }
