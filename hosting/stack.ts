@@ -1,6 +1,11 @@
 import { App } from "@aws-cdk/aws-amplify-alpha";
 import { CfnOutput, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
+import {
+  AwsCustomResource,
+  AwsCustomResourcePolicy,
+  PhysicalResourceId,
+} from "aws-cdk-lib/custom-resources";
 
 import { buildSpec } from "./buildSpec";
 import { autoBranchCreation } from "./autoBranchCreation";
@@ -53,6 +58,24 @@ export class AmplifyStack extends Stack {
 
     new CfnOutput(this, "appId", {
       value: amplifyApp.appId,
+    });
+
+    new AwsCustomResource(this, "aws-custom", {
+      onUpdate: {
+        service: "Amplify",
+        action: "updateApp",
+        parameters: {
+          appId: amplifyApp.appId,
+          platform: "WEB_COMPUTE",
+        },
+        physicalResourceId: PhysicalResourceId.of(
+          "test-amplify-custom-resource"
+        ),
+      },
+
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [amplifyApp.arn],
+      }),
     });
   }
 }
