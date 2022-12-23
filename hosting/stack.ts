@@ -21,7 +21,7 @@ export class AmplifyStack extends Stack {
     super(scope, id, props);
 
     const sourceCodeProvider = new GitHubSourceCodeProvider({
-      oauthToken: SecretValue.unsafePlainText(process.env.GITHUB_TOKEN!),
+      oauthToken: SecretValue.secretsManager("testAmplifyGithubSecret"),
       owner: "alexandrepernin",
       repository: "nextjs-amplify",
     });
@@ -51,7 +51,7 @@ export class AmplifyStack extends Stack {
 
     // Attach your main branch and define the branch settings (see below)
     amplifyApp.addBranch("main", {
-      autoBuild: true,
+      autoBuild: false,
       stage: "PRODUCTION",
       performanceMode: false,
     });
@@ -78,29 +78,21 @@ export class AmplifyStack extends Stack {
       }),
     });
 
-    const webhookCustomResource = new AwsCustomResource(
-      this,
-      "aws-custom-webhook",
-      {
-        onCreate: {
-          service: "Amplify",
-          action: "createWebhook",
-          parameters: {
-            appId: amplifyApp.appId,
-            branchName: "main",
-          },
-          physicalResourceId: PhysicalResourceId.of(
-            "test-amplify-custom-resource-webhook"
-          ),
+    new AwsCustomResource(this, "aws-custom-webhook", {
+      onCreate: {
+        service: "Amplify",
+        action: "createWebhook",
+        parameters: {
+          appId: amplifyApp.appId,
+          branchName: "main",
         },
-        policy: AwsCustomResourcePolicy.fromSdkCalls({
-          resources: [`${amplifyApp.arn}/webhooks/*`],
-        }),
-      }
-    );
-
-    new CfnOutput(this, "webhookUrl", {
-      value: webhookCustomResource.getResponseField("webhook.webhookUrl"),
+        physicalResourceId: PhysicalResourceId.of(
+          "test-amplify-custom-resource-webhook"
+        ),
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [`${amplifyApp.arn}/webhooks/*`],
+      }),
     });
   }
 }
